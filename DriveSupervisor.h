@@ -54,6 +54,8 @@ public:
 
   void setIRFilter(bool open, float val);
 
+  void readIRDistances(double dis[5]);
+
   void getIRDistances(double dis[5]);
   void getRobotVel(double dis[5]);
 

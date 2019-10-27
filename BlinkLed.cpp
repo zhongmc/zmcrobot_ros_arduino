@@ -2,8 +2,8 @@
 
 BlinkLed::BlinkLed()
 {
-  m_onTime= 700;
-  m_offTime = 300;
+  m_onTime= 200;
+  m_offTime = 1000;
   m_ledPin = 13;
 
   pinMode(m_ledPin, OUTPUT);
@@ -62,7 +62,7 @@ void BlinkLed::normalBlink()
 void BlinkLed::fastBlink()
 {
   m_onTime= 100;
-  m_offTime = 300;
+  m_offTime = 500;
   digitalWrite( m_ledPin, HIGH);
   isLedOn = true;
   m_onTimer = millis();
@@ -72,7 +72,7 @@ void BlinkLed::fastBlink()
 void BlinkLed::slowBlink()
 {
   m_onTime= 200;
-  m_offTime = 800;
+  m_offTime = 2000;
   digitalWrite( m_ledPin, HIGH);
   isLedOn = true;
   m_onTimer = millis();  

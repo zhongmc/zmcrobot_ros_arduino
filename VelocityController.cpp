@@ -39,7 +39,7 @@ void VelocityController::setGoal(double v, double w)
   {
     keepTheta = true;
     keepThetaTimer = (1 + 2 * abs(m_robot_w)) * 30;
-    log("kT %d,%.2f\n", keepThetaTimer, floatToStr(0, m_robot_w));
+    log("kT %d,%s\n", keepThetaTimer, floatToStr(0, m_robot_w));
     thetaPrevMillis = millis();
     //    mTheta = robot.theta; //转弯结束，保留当前角度
   }
@@ -52,13 +52,13 @@ void VelocityController::setGoal(double v, double w)
   if (mW != 0)
   {
 
-    m_v = 0;
+    m_v = v;
 
     double sw = abs(mW);
     if (sw > 1.5)
       sw = 1.5;
 
-    if (v != 0) //按照w 减速
+    if (v != 0 && abs(v) > 0.12 ) //按照w 减速
     {
       m_v = -0.027 * sw + 0.12;
       // m_v = -0.067 * sw + 0.1;
@@ -71,15 +71,29 @@ void VelocityController::setGoal(double v, double w)
     // D = -maxD*mw/PI + maxD
     // w = 2*V/(2*D+L)
 
-    double maxD = 0.2;
-
+ /*   double maxD = 0.2;
     m_w = 2 * m_v / (2 * (-maxD * 2 * sw / PI + maxD) + 0.16);
     if (mW < 0)
       m_w = -m_w;
-
     if (v == 0)
       m_w = 2 * mW;
+
+      */
+
+    m_w = sw;
+    if (mW < 0)
+      m_w = -sw;
+
+
+    log("SG %s,%s: %s,%s\n", 
+      floatToStr(0, v),
+      floatToStr(1, w),
+      floatToStr(2, m_v),
+      floatToStr(3, m_w)
+      );
+
   }
+  log("SG %s\n", floatToStr(0, v));
 }
 
 //depricated

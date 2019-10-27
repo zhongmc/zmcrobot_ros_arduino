@@ -2,7 +2,7 @@
 #define _IRRECEIVER_H_
 
 #include <Arduino.h>
-#include "ZMCRobot.h"
+#include "ZMCRobotROS.h"
 
 typedef struct
 {

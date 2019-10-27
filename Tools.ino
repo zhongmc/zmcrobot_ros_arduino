@@ -1,21 +1,9 @@
-#include "ZMCRobot.h"
+#include "ZMCRobotROS.h"
 #include <CurieBle.h>
-
-#if CAR_TYPE == DRIVE_CAR
-#include "Supervisor.h"
+#include <CurieIMU.h>
 #include "DriveSupervisor.h"
-#else
-#include "PureBalanceSupervisor.h"
-//#include "Kalman.h"
 
-#endif
-
-#if CAR_TYPE == DRIVE_CAR
-extern Supervisor supervisor;
 extern DriveSupervisor driveSupervisor;
-#else
-extern PureBalanceSupervisor balanceSupervisor;
-#endif
 
 extern long trigTime, echoTime;
 extern double ultrasonicDistance;
@@ -24,7 +12,8 @@ static char comData[32];
 int comDataCount;
 
 //extern Supervisor supervisor;
-extern double gp2y0a41[3][4];
+// extern double gp2y0a41[3][4];
+
 extern long count1, count2;
 
 extern bool openDebug;
@@ -57,47 +46,6 @@ void checkSerialData()
   }
 }
 
-//  Serial.println("\r\n\r\n***** BLE Commands *******************************");
-//  Serial.println(" ST stop!");
-//  Serial.println(" RS reset robot");
-//  Serial.println(" RP[type] require for settings, 1,2,3,4,5");
-//  Serial.println(" RT[type] Set robot type 0 normal 1 balance");
-//  Serial.println(" SM[val] Set simulate mode 1 true");
-//  Serial.println(" GO Start goto goal");
-//  Serial.println(" GG[][][] Set goto goal goan x,y,Q");
-//  Serial.println(" GD Start drive mode");
-//  Serial.println(" GB Start balance mode");
-//  Serial.println(" SD[v][w] set drive goal");
-//  Serial.println(" BS stop balance drive or goto goal\r\n\r\n");
-//
-// Serial.println(" ?; print this info");
-// Serial.println(" gr[]; controller infos");
-// Serial.println(" sb; start balance");
-// Serial.println(" st; stop robot");
-// Serial.println(" gd; distance of ultraSonic");
-// Serial.println(" od; open debug");
-// Serial.println(" cd; close debug");
-// Serial.println(" ci; read count");
-
-// Serial.println(" mm[pwm]; move motor with pwm");
-// Serial.println(" ml[pwm]; move left motor with pwm");
-// Serial.println(" mr[pwm]; move right motor with pwm");
-// Serial.println(" gg[xd]; start go to goal");
-
-// Serial.println(" sm[0/1]; simulate mode");
-// Serial.println(" io[0/1]; ignore obstacle");
-// Serial.println(" rs; reset");
-// Serial.println(" tl; turn around test left");
-// Serial.println(" tr; turn around test right");
-
-//  Serial.println(" bp[]; balance kp");
-//  Serial.println(" bi[]; balance ki");
-//  Serial.println(" bd[]; balance kd");
-//
-//  Serial.println(" vp[]; velocity kp");
-//  Serial.println(" vi[]; velocity ki");
-//  Serial.println(" vd[]; velocity kd");
-
 void processCommand(char *buffer, int bufferLen)
 {
   *(buffer + bufferLen) = 0;
@@ -122,15 +70,8 @@ void processCommand(char *buffer, int bufferLen)
     Serial.print(batteryVoltage);
     Serial.print(", uc dis:");
     Serial.println(ultrasonicDistance);
-#if CAR_TYPE == DRIVE_CAR
-    Serial.println("\r\n==");
-    supervisor.getRobotInfo();
     Serial.println("\r\n==");
     driveSupervisor.getRobotInfo();
-#else
-    Serial.println("\r\n====");
-    balanceSupervisor.getRobotInfo();
-#endif
   }
   else if (ch0 == 's' && ch1 == 't') //stop
   {
@@ -233,7 +174,6 @@ void processCommand(char *buffer, int bufferLen)
     manuaGoal();
   }
 
-#if CAR_TYPE == DRIVE_CAR
   else if (ch0 == 'g' && ch1 == 'o') //start go to goal
   {
     startGoToGoal();
@@ -251,13 +191,13 @@ void processCommand(char *buffer, int bufferLen)
   {
     double ods[5];
     getDoubleValues(buffer + 2, 5, ods);
-    supervisor.setObstacleDistance(ods);
+    // supervisor.setObstacleDistance(ods);
   }
   else if (ch0 == 'r' && ch1 == 'p') //set robot position
   {
     double fvs[3];
     getDoubleValues(buffer + 2, 3, fvs);
-    supervisor.setRobotPosition(fvs[0], fvs[1], fvs[2]);
+    // supervisor.setRobotPosition(fvs[0], fvs[1], fvs[2]);
     //to do
   }
 
@@ -288,171 +228,12 @@ void processCommand(char *buffer, int bufferLen)
     //   SetIgnoreObstacle(false);
   }
 
-#endif
-
-#if CAR_TYPE == BALANCE_CAR
-  else if (ch0 == 'c' && ch1 == 'l') //control loop
-  {
-    int val = *(buffer + 3) - '0';
-    bool bv = true;
-    if (val == 0)
-      bv = false;
-    if (*(buffer + 2) == '0') // speed
-    {
-      balanceSupervisor.setBeSpeedLoop(bv);
-    }
-    else
-    {
-      balanceSupervisor.setBeThetaLoop(bv);
-    }
-  }
-  else if (ch0 == 'i' && ch1 == 'u') //pring imu info
-  {
-    int val = *(buffer + 2) - '0';
-    bool bv = true;
-    if (val == 0)
-      bv = false;
-    balanceSupervisor.setBeSendIMUInfo(bv);
-  }
-
-  else if (ch0 == 'g' && ch1 == 'o') //start balance
-  {
-    Serial.println("Start balance!");
-    startBalance();
-  }
-  else if (ch0 == 's' && ch1 == 'b') //start balance
-  {
-    Serial.println("Start balance!");
-    startBalance();
-  }
-  else if (ch0 == 'b' && ch1 == 's') //stop balance
-  {
-    Serial.println("stop balance!");
-    stopBalance();
-  }
-
-  else if (ch0 == 'c' && ch1 == 'm')
-  {
-    CalibrateIMU();
-  }
-
-  else if (ch0 == 'p' && ch1 == 'i') //pid234;2 balance 3 speed 4 turning
-  {
-
-    PIDParam pidParam;
-    if (bufferLen <= 5)
-    {
-
-      if (*(buffer + 3) == '2')
-      {
-        pidParam = balanceSupervisor.getBalancePIDParam();
-        sendPID("PID2", pidParam.kp, pidParam.ki, pidParam.kd, 1000);
-      }
-      else if (*(buffer + 3) == '3')
-      {
-        pidParam = balanceSupervisor.getSpeedPIDParam();
-        sendPID("PID3", pidParam.kp, pidParam.ki, pidParam.kd, 1000);
-      }
-      else if (*(buffer + 3) == '4')
-      {
-        pidParam = balanceSupervisor.getThetaPIDParam();
-        sendPID("PID4", pidParam.kp, pidParam.ki, pidParam.kd, 1000);
-      }
-    }
-    else
-    {
-      pidParam = getPID(buffer + 4);
-
-      if (*(buffer + 3) == '2')
-      {
-        balanceSupervisor.setBalancePIDParam(pidParam);
-        Serial.println("Set PID of Balance:");
-      }
-      else if (*(buffer + 3) == '3')
-      {
-        balanceSupervisor.setSpeedPIDParam(pidParam);
-        Serial.println("Set PID of speed:");
-      }
-      else if (*(buffer + 3) == '4')
-      {
-        balanceSupervisor.setThetaPIDParam(pidParam);
-        Serial.println("Set PID of turning:");
-      }
-    }
-  }
-#endif
   else
   {
     Serial.println("Unknow");
   }
 }
 
-#if CAR_TYPE == BALANCE_CAR
-/*
-SETTINGS getPID(char *buffer)
-{
-  double p, i, d;
-  p = atof((buffer));
-  char *buf = strchr(buffer, ',');
-  i = atof((buf + 1));
-  buf = strchr((buf + 1), ',');
-  d = atof(buf + 1);
-
-  Serial.print("PID:");
-  Serial.print(p);
-  Serial.print(",");
-  Serial.print(i);
-  Serial.print(",");
-  Serial.println(d);
-
-  SETTINGS settings;
-  settings.sType = 1;
-  settings.kp = p;
-  settings.ki = i;
-  settings.kd = d;
-  return settings;
-}
-*/
-
-PIDParam getPID(char *buffer)
-{
-  double p, i, d;
-  p = atof((buffer));
-  char *buf = strchr(buffer, ',');
-  i = atof((buf + 1));
-  buf = strchr((buf + 1), ',');
-  d = atof(buf + 1);
-
-  Serial.print("PID:");
-  Serial.print(p);
-  Serial.print(",");
-  Serial.print(i);
-  Serial.print(",");
-  Serial.println(d);
-
-  PIDParam settings;
-  settings.kp = p;
-  settings.ki = i;
-  settings.kd = d;
-  return settings;
-}
-
-void sendPID(char *pref, double kp, double ki, double kd, int scale)
-{
-  String retStr;
-
-  String pre = pref;
-  char tmp[10];
-  itoa((int)(scale * kp), tmp, 10);
-  String skp = tmp;
-  itoa((int)(scale * ki), tmp, 10);
-  String ski = tmp;
-  itoa((int)(scale * kd), tmp, 10);
-  String skd = tmp;
-
-  retStr = pre + skp + "," + ski + "," + skd;
-  Serial.println(retStr);
-}
 
 void CalibrateIMU()
 {
@@ -506,25 +287,11 @@ void CalibrateIMU()
   Serial.print("\t"); // 0
   Serial.println(CurieIMU.getGyroOffset(Z_AXIS));
 }
-#endif
 
 void printCountInfo()
 {
 
   log("CI:%d, %d.\n", count1, count2);
-
-  // Serial.print(millis());
-  // Serial.print(',');
-  // Serial.print(count1);
-  // Serial.print(',');
-  // Serial.println(count2);
-
-  // Serial.print("C1=");
-  // Serial.print(count1);
-  // Serial.print(", C2=");
-  // Serial.println(count2);
-  // Serial.print("time:");
-  // Serial.println(millis());
 }
 
 void speedTest(int pwm0, int pwm1, int step)
@@ -658,7 +425,6 @@ char *floatToStr(int idx, signed char width, unsigned char prec, double val)
   return dtostrf(val, width, prec, tmp[idx]);
 }
 
-#if CAR_TYPE == DRIVE_CAR
 
 void setPID(char *buffer)
 {
@@ -686,37 +452,5 @@ void setPID(char *buffer)
   settings.kp = p;
   settings.ki = i;
   settings.kd = d;
-  supervisor.updateSettings(settings);
   driveSupervisor.updateSettings(settings);
 }
-
-// void stepResponseTest(int pwm)
-// {
-//   Serial.print("SR: ");
-//   Serial.println(pwm);
-//   printCountInfo();
-//   printCountInfo();
-//   int count = 100;
-//   while (count > 0)
-//   {
-//     delay(20);
-//     printCountInfo();
-//   }
-//   printCountInfo();
-//   MoveMotor(0);
-// }
-
-/*
-void log(int level, char *format, ...)
-{
-  char str_tmp[256];
-  int i = 0;
-  va_list vArgList;                              //定义一个va_list型的变量,这个变量是指向参数的指针.
-  va_start(vArgList, format);                    //用va_start宏初始化变量,这个宏的第二个参数是第一个可变参数的前一个参数,是一个固定的参数
-  i = _vsnprintf(str_tmp, 256, format, vArgList); //注意,不要漏掉前面的_
-  va_end(vArgList);                              //用va_end宏结束可变参数的获取
-  return i;                                      //返回参数的字符个数中间有逗号间隔
-}
-*/
-
-#endif
