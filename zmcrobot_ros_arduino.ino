@@ -354,7 +354,7 @@ void irRemoteProcess(int code)
     return;
   }
 
-  if (code == 22) //*
+  if (code == 22) //X
   {
     balanceSupervisor.setBeSpeedLoop(true);
     Serial.println("speed loop.");

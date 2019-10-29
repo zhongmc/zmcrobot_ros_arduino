@@ -9,7 +9,7 @@ extern long trigTime, echoTime;
 extern double ultrasonicDistance;
 
 static char comData[32];
-int comDataCount;
+int comDataCount = 0;
 
 //extern Supervisor supervisor;
 // extern double gp2y0a41[3][4];
@@ -28,18 +28,18 @@ void checkSerialData()
   {
     while (Serial.available() > 0)
     {
+      if (comDataCount > 30) //some error
+      {
+        Serial.print("UnKnow cmd:");
+        comData[30] = 0;
+        Serial.println(comData);
+        comDataCount = 0;
+      }
       char ch = Serial.read();
       comData[comDataCount++] = ch;
       if (ch == ';' || ch == '\r' || ch == '\n') //new command
       {
         processCommand(comData, comDataCount);
-        comDataCount = 0;
-      }
-      if (comDataCount > 30) //some error
-      {
-        Serial.print("UnKnow cmd:");
-        comData[comDataCount] = 0;
-        Serial.println(comData);
         comDataCount = 0;
       }
     }
@@ -234,7 +234,6 @@ void processCommand(char *buffer, int bufferLen)
   }
 }
 
-
 void CalibrateIMU()
 {
   Serial.println("Internal sensor offsets BEFORE calibration( xAcc,yAcc,zAcc, xGyro, yGyro, zGyro ...");
@@ -389,7 +388,7 @@ void getDoubleValues(char *buffer, int c, double *fvs)
   // Serial.println(';');
 }
 
-int formatStr(char *buf, char *format, ...)
+int formatStr(char *buf, const char *format, ...)
 {
   int c = 0;
   va_list vArgList;
@@ -400,7 +399,7 @@ int formatStr(char *buf, char *format, ...)
   return c;
 }
 
-void log(char *format, ...)
+void log(const char *format, ...)
 {
   char tmp[500];
   va_list vArgList;
@@ -412,19 +411,19 @@ void log(char *format, ...)
 
 char tmp[20][15];
 
-char *floatToStr(int idx, double val)
+const char *floatToStr(int idx, double val)
 {
 
   return floatToStr(idx, (signed char)6, (unsigned char)3, val);
 }
 
-char *floatToStr(int idx, signed char width, unsigned char prec, double val)
+const char *floatToStr(int idx, signed char width, unsigned char prec, double val)
 {
   if (idx >= 19)
     return NULL;
-  return dtostrf(val, width, prec, tmp[idx]);
+  dtostrf(val, width, prec, tmp[idx]);
+  return tmp[idx];
 }
-
 
 void setPID(char *buffer)
 {
