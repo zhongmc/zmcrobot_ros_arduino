@@ -66,7 +66,6 @@ void DriveSupervisor::setGoal(double v, double w)
   m_input.v = v;
   m_input.theta = w;
   m_Controller.setGoal(v, w);
-  
 }
 
 void DriveSupervisor::resetRobot()
@@ -185,13 +184,13 @@ void DriveSupervisor::execute(long left_ticks, long right_ticks, double dt)
     MoveRightMotor(pwm.pwm_r);
   }
 
-
-    //send robot position
-    log("RP%d,%d,%d,%s\n",
-        (int)(10000 * robot.x),
-        (int)(10000 * robot.y),
-        (int)(10000 * robot.theta),
-        floatToStr(0, robot.velocity));
+  //send robot position
+  log("RP%d,%d,%d,%d,%d\n",
+      (int)(10000 * robot.x),
+      (int)(10000 * robot.y),
+      (int)(10000 * robot.theta),
+      (int)(10000 * robot.w),
+      (int)(10000 * robot.velocity));
 
   //   uint32_t nowMicros = micros();
 
@@ -254,7 +253,6 @@ void DriveSupervisor::getIRDistances(double dis[5])
     dis[i] = irSensors[i]->distance;
   }
 }
-
 
 void DriveSupervisor::readIRDistances(double dis[5])
 {
