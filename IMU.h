@@ -3,17 +3,14 @@
 #define _IMU_H_
 
 #include <Arduino.h>
-
 #include <CurieIMU.h>
-
 //#include "kalmanFilter.h"
-
 //#include "MyMPU6050.h"
 //#include "MPU6050.h"
-
+#include <MadgwickAHRS.h>
 #include <Kalman.h>
 
-#define GYRO_RATE 200
+#define GYRO_RATE 100
 
 class IMU
 {
@@ -24,10 +21,23 @@ public:
   void getIMUInfo(double *buf, double dt);
   //filter paramaters
   double KG_ANG;
-
-
   void readIMU(double dt);
-  void calculateAngle(double dt);
+  void calculateAttitute(double td);
+  double getRoll() { return filter.getRoll(); };
+  double getPitch() { return filter.getPitch(); };
+  double getYaw() { return filter.getYaw(); };
+
+  //  度/秒 角速度 idx 0，1，2 x y z
+  double getGyro(int idx);
+  //加速度 g/秒？ idx 0, 1, 2 x y z
+  double getAcceleration(int idx);
+  //    double roll = filter.getRoll();
+  //    pitch = filter.getPitch();
+  //    heading = filter.getYaw();
+
+  void
+  calculateAngle(double dt);
+  double getKalmanAngle() { return m_kalman_angle; };
 
 private:
   //传感器角度（atan（ax/ay）, kalman, madgwick filter, Kalman1
@@ -48,10 +58,16 @@ private:
   Kalman kalman;
   // KalmanFilter km;
 
-private:
+  Madgwick filter;
 
+private:
+  //raw IMU 数据
   int m_aix, m_aiy, m_aiz;
   int m_gix, m_giy, m_giz;
+
+  //转换后的 IMU数据
+  double ax, ay, az;
+  double gx, gy, gz;
 
   void sendIMUInfo();
 };

@@ -24,7 +24,8 @@ DriveSupervisor::DriveSupervisor()
 
   mSimulateMode = false;
   mIgnoreObstacle = false;
-
+  alpha = 0.5;
+  mUseIMU = false;
   danger = false;
 }
 
@@ -92,7 +93,7 @@ void DriveSupervisor::reset(long leftTicks, long rightTicks)
   m_Controller.reset(&robot);
 }
 
-void DriveSupervisor::execute(long left_ticks, long right_ticks, double dt)
+void DriveSupervisor::execute(long left_ticks, long right_ticks, double gyro, double dt)
 {
 
   //  uint32_t timer = micros();
@@ -100,7 +101,12 @@ void DriveSupervisor::execute(long left_ticks, long right_ticks, double dt)
   if (mSimulateMode)
     robot.updateState((long)m_left_ticks, (long)m_right_ticks, dt);
   else
-    robot.updateState(left_ticks, right_ticks, dt);
+  {
+    if (mUseIMU)
+      robot.updateState(left_ticks, right_ticks, gyro, alpha, dt);
+    else
+      robot.updateState(left_ticks, right_ticks, dt);
+  }
 
   check_states();
 
@@ -191,6 +197,15 @@ void DriveSupervisor::execute(long left_ticks, long right_ticks, double dt)
       (int)(10000 * robot.theta),
       (int)(10000 * robot.w),
       (int)(10000 * robot.velocity));
+
+  //send IRSensor info
+  IRSensor **irSensors = robot.getIRSensors();
+  log("IR%d,%d,%d,%d,%d\n",
+      (int)(100 * irSensors[0]->distance),
+      (int)(100 * irSensors[1]->distance),
+      (int)(100 * irSensors[2]->distance),
+      (int)(100 * irSensors[3]->distance),
+      (int)(100 * irSensors[4]->distance));
 
   //   uint32_t nowMicros = micros();
 

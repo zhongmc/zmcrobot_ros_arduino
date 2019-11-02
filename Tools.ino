@@ -197,7 +197,7 @@ void processCommand(char *buffer, int bufferLen)
   {
     double fvs[3];
     getDoubleValues(buffer + 2, 3, fvs);
-    // supervisor.setRobotPosition(fvs[0], fvs[1], fvs[2]);
+    driveSupervisor.setRobotPosition(fvs[0], fvs[1], fvs[2]);
     //to do
   }
 

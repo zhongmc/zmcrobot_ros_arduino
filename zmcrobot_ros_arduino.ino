@@ -17,7 +17,6 @@
 //#include "MyMenu.h"
 #include "IMU.h"
 
-
 #define VOLT_IN_PIN A0
 #define ULTRASONIC_ECHO 11
 #define ULTRASONIC_TRIG 10
@@ -26,6 +25,7 @@
 #define STATE_IDLE 0
 #define STATE_MENU 1
 #define STATE_DRIVE 2
+
 #define STATE_GOTOGOAL 3
 #define STATE_BALANCE 4
 #define STATE_CALIBRATE 5
@@ -71,12 +71,10 @@ extern int comDataCount;
 
 unsigned long millisPrevKey, millisPrev;
 
-
 IRSensor irSensor(GP2Y0A41);
 
 static double batteryVoltage;  // Measured battery level
 static uint8_t batteryCounter; // Counter used to check if it should check the battery level
-
 
 double irDistance[5];
 
@@ -153,21 +151,26 @@ void setup()
   driveSupervisor.init();
   bExecDrive = false;
   bExecGTG = false;
+
   blinkLed.init();
 
-
-    mIMU.init();
+  mIMU.init();
 
   // bCount = 0;
+  startIMU();
 
   millisPrevKey = millis();
   millisPrev = millisPrevKey; //millis();
+
+  // driveSupervisor.setRobotPosition(0, 0, PI * mIMU.getYaw() / 180.0);
 }
 
-
+//
+int driveCycleCount = 0;
 
 void loop()
 {
+
   checkSerialData();
   blinkLed.beSureToBlink();
   //ble cmd process
@@ -175,20 +178,17 @@ void loop()
   //ultrasonic process
   processUltrasonic();
 
-
   // if (irRecv.readIRCode(ircode) == 0)
   // {
   //   if (ircode.code_h + ircode.code_l == 255)
   //     irRemoteProcess(ircode.code_l);
   // }
 
-
-
   checkBLTL(); //检查BT 转圈指令
-  if (bExecDrive)
+  if (bExecDrive == true)
   {
     bExecDrive = false;
-    driveSupervisor.execute(readLeftEncoder(), readRightEncoder(), 0.05); //1/20
+    driveSupervisor.execute(readLeftEncoder(), readRightEncoder(), mIMU.getGyro(2), 0.05); //1/20
   }
 
   // if (bExecGTG)
@@ -212,6 +212,8 @@ void loop()
     else
     {
       driveSupervisor.readIRDistances(irDistance);
+      pos = driveSupervisor.getRobotPosition();
+      pos.theta = (PI * mIMU.getYaw()) / 180.0;
       sendRobotStateValue(1, pos, irDistance, batteryVoltage);
     }
 
@@ -228,16 +230,13 @@ void loop()
             Serial.println("Bat L...");
             stopAndReset();
             currentState = STATE_IDLE;
-
           }
           blinkLed.slowBlink();
         }
       }
-     }
+    }
   }
 }
-
-
 
 void setGoal(double x, double y, int theta, double v)
 {
@@ -251,10 +250,7 @@ void startGoToGoal()
     return;
 
   stopRobot(); //stop currentState
-
 }
-
-
 
 void ResetRobot()
 {
@@ -274,17 +270,44 @@ void startDrive()
 
   // to test set goal y to 0
   driveSupervisor.reset(readLeftEncoder(), readRightEncoder());
+  // Position pos = driveSupervisor.getRobotPosition();
+  // pos.theta = (PI * mIMU.getYaw()) / 180.0;
+  // driveSupervisor.setRobotPosition(pos.x, pos.y, pos.theta);
   //   currentState = STATE_DRIVE;
 
-  const int oneSecInUsec = 1000000; // A second in mirco second unit.
-  // time = oneSecInUsec / 100; // time is used to toggle the LED is divided by i
-  CurieTimerOne.start(oneSecInUsec / 20, &driveIsr); // set timer and callback
+  // const int oneSecInUsec = 1000000; // A second in mirco second unit.
+  // // time = oneSecInUsec / 100; // time is used to toggle the LED is divided by i
+  // CurieTimerOne.start(oneSecInUsec / 20, &driveIsr); // set timer and callback
 }
 
 void driveIsr()
 {
   bExecDrive = true;
   // driveSupervisor.execute(readLeftEncoder(), readRightEncoder(), 0.05); //1/20
+}
+
+void startIMU()
+{
+  const int oneSecInUsec = 1000000; // A second in mirco second unit.
+  // time = oneSecInUsec / 100; // time is used to toggle the LED is divided by i
+  CurieTimerOne.start(oneSecInUsec / GYRO_RATE, &IMUIsr); // set timer and callback
+}
+
+void IMUIsr()
+{
+
+  mIMU.readIMU(0);           //1/GYRO_RATE
+  mIMU.calculateAttitute(0); //1/GYRO_RATE
+
+  if (currentState == STATE_DRIVE)
+  {
+    driveCycleCount++;
+    if (driveCycleCount >= 5) //GYRO_RATE / DriveRate (200/20 ) GYRO_RATE 100
+    {
+      driveCycleCount = 0;
+      bExecDrive = true;
+    }
+  }
 }
 
 void SetSimulateMode(bool val)
@@ -312,7 +335,7 @@ void SetIgnoreObstacle(bool igm)
 void stopRobot()
 {
   blinkLed.normalBlink();
-  CurieTimerOne.kill();
+  // CurieTimerOne.kill();
   currentState = STATE_IDLE;
   stopAndReset();
 }
@@ -432,8 +455,6 @@ void irRemoteProcess(int code)
   }
 }
 */
-
-
 
 void setDriveGoal(double v, double w)
 {

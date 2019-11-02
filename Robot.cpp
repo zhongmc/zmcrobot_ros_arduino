@@ -104,6 +104,53 @@ void Robot::reset(long left_ticks, long right_ticks)
   //  theta = 0;
 }
 
+//融合IMU 的陀螺仪信息，计算转向 gyro为 度/秒  alpha 转弯角度融合参数 1-0； 1时只用编码器的
+
+void Robot::updateState(long left_ticks, long right_ticks, double gyro, double alpha, double dt)
+{
+  //  long left_ticks, right_ticks;
+  if (prev_right_ticks == right_ticks && prev_left_ticks == left_ticks)
+  {
+    w = 0;
+    readIRSensors();
+    velocity = 0;
+    return; //no change
+  }
+
+  double d_right, d_left, d_center;
+
+  vel_l = ((double)abs(left_ticks - prev_left_ticks) / dt) / (double)ticks_per_rev_l;
+  vel_r = ((double)abs(right_ticks - prev_right_ticks) / dt) / (double)ticks_per_rev_r;
+
+  vel_l = 2 * PI * vel_l;
+  vel_r = 2 * PI * vel_r;
+
+  d_left = (left_ticks - prev_left_ticks) * m_per_tick_l;
+  d_right = (right_ticks - prev_right_ticks) * m_per_tick_r;
+
+  prev_left_ticks = left_ticks;
+  prev_right_ticks = right_ticks;
+
+  d_center = (d_right + d_left) / 2;
+  velocity = d_center / dt;
+
+  double phi = (d_right - d_left) / wheel_base_length;
+
+  double gyro_ = gyro * PI / 360.0;
+  double dgyt = gyro_ * dt;
+
+  phi = alpha * phi + (1 - alpha) * dgyt;
+
+  w = phi / dt;
+
+  x = x + d_center * cos(theta);
+  y = y + d_center * sin(theta);
+  theta = theta + phi;
+  theta = atan2(sin(theta), cos(theta));
+
+  readIRSensors();
+}
+
 void Robot::updateState(long left_ticks, long right_ticks, double dt)
 {
   //  long left_ticks, right_ticks;

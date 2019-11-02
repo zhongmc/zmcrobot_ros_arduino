@@ -168,7 +168,6 @@ void driveCharacteristicWritten(BLECentral &central, BLECharacteristic &characte
     ResetRobot();
   }
 
-
   else if (cmd[0] == 'G' && cmd[1] == 'O') // action...
   {
     startGoToGoal();
@@ -230,13 +229,27 @@ void driveCharacteristicWritten(BLECentral &central, BLECharacteristic &characte
     }
     // turnAround(pwm);
   }
+
+  else if (cmd[0] == 'I' && cmd[1] == 'M') //use IMU or not IM0/1,0.5;
+  {
+    bool val = *(data + 2) - '0';
+    float alpha = 0.5;
+    if (val == true)
+      alpha = atof((char *)(data + 4));
+    log("use IMU:%d,%s\n", val, floatToStr(0, alpha));
+    driveSupervisor.mUseIMU = val;
+    driveSupervisor.alpha = alpha;
+    //driveSupervisor.setUseIMU(val, alpha);
+  }
+
   else if (cmd[0] == 'I' && cmd[1] == 'F') // set ir filter IF0/1,0.6;
   {
     bool val = *(data + 2) - '0';
-    float filter = atof((char *)(data + 3));
+    float filter = atof((char *)(data + 4));
     log("IR flt:%d,%s\n", val, floatToStr(0, filter));
     driveSupervisor.setIRFilter(val, filter);
   }
+
   else if (cmd[0] == 'I' && cmd[1] == 'R')
   {
     short idx = *(data + 2) - '0';
@@ -326,7 +339,6 @@ void setConfigValue(const unsigned char *cfgArray)
   //  updateConfigToMenu();
 }
 
-
 void intToByte(byte *arrayBuf, int val)
 {
   if (val > 0)
@@ -381,7 +393,6 @@ int byteToInt(byte *arrayBuf)
   return val;
 }
 
-
 //type, x, y, theta, d0,d1,d2,d3,d4,voltage
 void sendRobotStateValue(byte stateType, Position pos, double irDistance[5], double voltage)
 {
@@ -429,7 +440,6 @@ void checkBLTL()
   blTL = false;
 }
 
-
 void processSetingsRequire()
 {
   if (queueLen == 0)
@@ -443,7 +453,7 @@ void processSetingsRequire()
   settings.sType = sType;
   // // 1: pid for 3 wheel; 2: pid for balance;  3: pid for speed; 4: PID theta  5: settings for robot; 6: settings for balance robot;
 
- // settings = driveSupervisor.getSettings(sType);
+  // settings = driveSupervisor.getSettings(sType);
   SendSettings(settings);
 }
 
